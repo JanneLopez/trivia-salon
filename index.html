@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trivia del Salón</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Layout: editor de una columna para preparar; pantalla de proyector a lo ancho para jugar */
+  :root {
+    --bg: #fff8ec;
+    --panel: #ffffff;
+    --panel-2: #fffdf8;
+    --ink: #2b2140;
+    --muted: #7a6f8c;
+    --line: #eadfcc;
+    --primary: #6c4ce0;
+    --primary-ink: #ffffff;
+    --primary-shadow: #4a31a8;
+    --ok: #2bb673; --ok-shadow: #1d8753; --ok-bg: #eefaf3; --ok-line: #bfe8d2;
+    --bad: #e84a5f;
+    --a: #e84a5f; --b: #2f8fe0; --c: #e09a0e; --d: #2bb673;
+    --font: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1c1729; --panel: #262036; --panel-2: #2b2440; --ink: #f4effc; --muted: #b3a8c7;
+      --line: #3d3452; --primary: #8b70f0; --primary-shadow: #5a3fc4;
+      --ok-bg: #1f3a2e; --ok-line: #2f6b4f; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1c1729; --panel: #262036; --panel-2: #2b2440; --ink: #f4effc; --muted: #b3a8c7;
+    --line: #3d3452; --primary: #8b70f0; --primary-shadow: #5a3fc4;
+    --ok-bg: #1f3a2e; --ok-line: #2f6b4f; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font); font-size: 18px; min-height: 100vh;
+  }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 14px; color: inherit; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+  input, textarea { font: inherit; color: var(--ink); background: var(--panel); }
+  .hidden { display: none !important; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 64px; }
+
+  .btn { background: var(--primary); color: var(--primary-ink); padding: 12px 22px; font-weight: 700; box-shadow: 0 4px 0 var(--primary-shadow); transition: transform .08s; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--primary-shadow); }
+  .btn.ghost { background: var(--panel); color: var(--ink); box-shadow: 0 4px 0 var(--line); border: 2px solid var(--line); }
+  .btn.ghost.on { border-color: var(--primary); color: var(--primary); }
+  .btn.big { font-size: 26px; padding: 16px 36px; }
+  .btn.green { background: var(--ok); box-shadow: 0 4px 0 var(--ok-shadow); }
+
+  h1 { font-size: 48px; margin: 0; line-height: 1; text-wrap: balance; }
+  h2 { margin: 0 0 12px; font-size: 26px; }
+  .sub { color: var(--muted); margin: 6px 0 0; }
+
+  .header { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+  .sync { font-size: 15px; color: var(--muted); margin-top: 4px; min-height: 1.4em; }
+  .msg { color: var(--bad); font-weight: 700; min-height: 1.4em; margin-top: 8px; }
+
+  .teams-setup { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .team-input { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 22px; height: 22px; border-radius: 50%; flex: none; display: inline-block; vertical-align: middle; }
+  .team-input input { flex: 1; min-width: 0; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  .q-item { border: 2px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; background: var(--panel-2); }
+  .q-item.done { border-color: var(--ok-line); }
+  .q-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
+  .q-num { font-weight: 800; color: var(--primary); }
+  .q-status { font-size: 14px; color: var(--muted); }
+  .q-item.done .q-status { color: var(--ok); }
+  .q-item textarea { width: 100%; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; resize: vertical; min-height: 54px; }
+  .opt { display: flex; align-items: center; gap: 8px; border: 2px solid var(--ok-line); border-radius: 12px; padding: 4px 10px; background: var(--ok-bg); min-width: 0; margin-top: 8px; }
+  .opt .tag { font-size: 14px; font-weight: 700; color: var(--ok); white-space: nowrap; }
+  .opt input[type=text] { border: 0; flex: 1; min-width: 0; padding: 6px 2px; background: transparent; outline: none; }
+  .icon-btn { background: transparent; color: var(--muted); padding: 4px 8px; font-size: 15px; }
+  .icon-btn:hover, .icon-btn.armed { color: var(--bad); font-weight: 700; }
+  .tip { font-size: 15px; color: var(--muted); }
+
+  #play { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+  .topbar { display: flex; justify-content: space-between; padding: 10px 16px 0; gap: 8px; }
+  .topbar .btn { font-size: 14px; padding: 6px 12px; }
+  .scorebar { display: flex; gap: 10px; padding: 10px 16px; flex-wrap: wrap; justify-content: center; }
+  .score { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 3px solid var(--line); border-radius: 16px; padding: 6px 14px; font-size: 22px; font-weight: 700; transition: transform .2s; }
+  .score.turn { border-color: var(--primary); transform: scale(1.06); }
+  .score .pts { font-size: 30px; font-weight: 800; min-width: 1.4em; text-align: center; font-variant-numeric: tabular-nums; }
+  .score.bump .pts { animation: bump .5s; }
+  @keyframes bump { 50% { transform: scale(1.6); color: var(--ok); } }
+
+  .stage { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 1200px; width: 100%; margin: 0 auto; padding: 8px 16px 24px; }
+  .progress { text-align: center; color: var(--muted); font-size: 20px; font-weight: 700; }
+  .turn-label { text-align: center; font-size: 22px; margin-top: 2px; }
+  .question { text-align: center; font-size: clamp(30px, 5vw, 58px); font-weight: 800; line-height: 1.15; margin: 18px 0 28px; text-wrap: balance; overflow-wrap: anywhere; }
+  .answer { align-self: center; max-width: 100%; color: #fff; background: var(--ok); font-size: clamp(30px, 4.5vw, 54px); font-weight: 800; padding: 18px 40px; border-radius: 24px; text-align: center; box-shadow: 0 6px 0 var(--ok-shadow); overflow-wrap: anywhere; animation: pop .4s ease-out; }
+  .answer small { display: block; font-size: 18px; font-weight: 700; opacity: .85; letter-spacing: .04em; }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } }
+
+  .timer { text-align: center; font-size: 26px; font-weight: 800; margin-top: 18px; height: 40px; font-variant-numeric: tabular-nums; }
+  .timer.low { color: var(--bad); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { transform: scale(1.15); } }
+
+  .controls { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+  .award { margin-top: 18px; text-align: center; }
+  .award p { margin: 0 0 10px; font-size: 22px; font-weight: 700; }
+  .award .row { justify-content: center; }
+  .award-btn { color: #fff; font-weight: 700; padding: 12px 20px; font-size: 20px; box-shadow: 0 4px 0 rgba(0,0,0,.2); }
+  .award-btn.given { outline: 4px solid var(--ink); outline-offset: 2px; }
+  .award-btn.given::after { content: " ✓"; }
+
+  #final { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px 16px; }
+  .winner { font-size: clamp(40px, 7vw, 80px); font-weight: 800; line-height: 1.1; margin: 10px 0 30px; text-wrap: balance; }
+  .podium { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 520px; margin-bottom: 30px; }
+  .podium .score { justify-content: space-between; font-size: 26px; }
+  canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 36px; }
+    .answer { padding: 14px 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ CONFIGURACIÓN ============ -->
+<section id="setup" class="wrap">
+  <div class="header">
+    <div>
+      <h1>🎉 Trivia del Salón</h1>
+      <p class="sub">Escribe tus preguntas, arma los equipos y ¡a jugar!</p>
+      <div class="sync" id="syncStatus"></div>
+    </div>
+    <div>
+      <button class="btn big green" id="startBtn">▶ Empezar juego</button>
+      <div class="msg" id="startMsg"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>👥 Equipos</h2>
+    <div class="row" style="margin-bottom:14px">
+      <span>Número de equipos:</span>
+      <button class="btn ghost" data-teams="2">2</button>
+      <button class="btn ghost" data-teams="3">3</button>
+      <button class="btn ghost" data-teams="4">4</button>
+    </div>
+    <div class="teams-setup" id="teamsSetup"></div>
+    <div class="row" style="margin-top:16px">
+      <span>⏱ Tiempo por pregunta:</span>
+      <button class="btn ghost" data-time="0">Sin tiempo</button>
+      <button class="btn ghost" data-time="20">20 s</button>
+      <button class="btn ghost" data-time="30">30 s</button>
+      <button class="btn ghost" data-time="60">60 s</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+        <input type="checkbox" id="shuffleChk" style="width:20px;height:20px"> Revolver el orden de las preguntas
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="q-head">
+      <h2 style="margin:0">✏️ Preguntas <span id="qCount" class="tip"></span></h2>
+      <div class="row">
+        <button class="btn ghost hidden" id="exportBtn">💾 Descargar copia</button>
+        <button class="btn ghost" id="importBtn">📂 Abrir copia</button>
+        <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+      </div>
+    </div>
+    <p class="tip">Escribe la pregunta y su respuesta. Las preguntas sin respuesta no salen en el juego.</p>
+    <div id="qList"></div>
+    <div class="row">
+      <button class="btn ghost" id="addQ">➕ Agregar pregunta</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ JUEGO ============ -->
+<section id="play" class="hidden">
+  <div class="topbar">
+    <button class="btn ghost" id="quitBtn">✕ Salir</button>
+    <button class="btn ghost" id="fsBtn">⛶ Pantalla completa</button>
+  </div>
+  <div class="scorebar" id="scorebar"></div>
+  <div class="stage">
+    <div class="progress" id="progress"></div>
+    <div class="turn-label" id="turnLabel"></div>
+    <div class="question" id="questionText"></div>
+    <div class="answer hidden" id="answer"></div>
+    <div class="timer" id="timer"></div>
+    <div class="controls" id="revealControls">
+      <button class="btn big" id="revealBtn">👀 Mostrar respuesta</button>
+    </div>
+    <div class="award hidden" id="awardBox">
+      <p>¿Quién acertó? (toca para dar el punto)</p>
+      <div class="row" id="awardBtns"></div>
+      <div class="controls">
+        <button class="btn big" id="nextBtn">Siguiente ➜</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL ============ -->
+<section id="final" class="hidden">
+  <div style="font-size:30px;font-weight:700;color:var(--muted)">🏆 ¡Terminó la trivia! 🏆</div>
+  <div class="winner" id="winnerText"></div>
+  <div class="podium" id="podium"></div>
+  <div class="row" style="justify-content:center">
+    <button class="btn big" id="againBtn">🔁 Jugar otra vez</button>
+    <button class="btn big ghost" id="editBtn">✏️ Editar preguntas</button>
+  </div>
+</section>
+
+<canvas id="confetti"></canvas>
+
+<script>
+const TEAM_COLORS = ['#ec4899', '#2f8fe0', '#e09a0e', '#2bb673'];
+const DEFAULT_TEAMS = ['Equipo Rojo', 'Equipo Azul', 'Equipo Amarillo', 'Equipo Verde'];
+const STORE_KEY = 'trivia-salon-v1';
+
+const blankQ = () => ({ text: '', answer: '' });
+
+// Preguntas que vienen incluidas; se pueden cambiar en el editor
+const DEFAULT_QUESTIONS = [
+  ['¿Cuánto es 5 + 5?', '10'],
+  ['What do we ask a friend when they feel sad?', 'Are you OK?'],
+  ['Menciona 4 palabras que empiecen con la letra T.', 'Por ejemplo: tigre, taza, tomate, tren'],
+  ['¿Cómo se llama el ratón más famoso de Disney?', 'Mickey Mouse'],
+  ['¿Cuál es el nombre del perro que quería ser gato?', 'Risoto'],
+  ['¿Qué hizo Jesús cuando sus discípulos tuvieron miedo durante una tormenta en el mar?', 'Calmó la tormenta'],
+  ['¿Cuáles son los nombres de las integrantes de Huntrix?', 'Rumi, Mira y Zoey'],
+  ['¿Qué animales son Tom y Jerry?', 'Tom es un gato y Jerry es un ratón'],
+  ['¿Cómo se llama el enemigo de Mario Bros. que tiene caparazón y escupe fuego?', 'Bowser'],
+  ['¿Cómo se llamaba la fundadora de nuestro colegio, María Alvarado?', 'Elsie Wood'],
+  ['¿Qué animal es Sonic?', 'Un erizo'],
+  ['¿Cómo se llama la princesa que tiene el cabello muy largo y vive en una torre?', 'Rapunzel'],
+  ['¿Cuántas sílabas tiene la palabra «dinosaurio»?', 'Cuatro: di-no-sau-rio'],
+  ['Si hoy es lunes, ¿qué día viene después?', 'Martes'],
+  ['¿Quién venció al gigante Goliat?', 'David'],
+  ['¿Cuántas patas tienen dos perros juntos?', '8'],
+  ['¿Cuáles son las tres palabras del lema de nuestro colegio?', 'Amor, Honor y Servicio'],
+  ['¿Qué figura tiene cuatro lados iguales y cuatro esquinas?', 'El cuadrado'],
+  ['¿Cuántas vocales hay y cuáles son?', '5: a, e, i, o, u'],
+  ['How do you say «perro» in English?', 'Dog'],
+].map(([text, answer]) => ({ text, answer }));
+
+let state = {
+  questions: DEFAULT_QUESTIONS,
+  teams: ['Equipo Girls', 'Equipo Boys'],
+  time: 0,
+  shuffle: true,
+  updatedAt: 0,
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function sanitize(d) {
+  if (!d || !Array.isArray(d.questions)) return null;
+  return {
+    questions: d.questions.map((q) => ({
+      text: String(q.text ?? ''),
+      // Versión anterior tenía opciones: se conserva la que estaba marcada como correcta
+      answer: String(q.answer ?? (q.options || [])[+q.correct || 0] ?? ''),
+    })),
+    teams: Array.isArray(d.teams) && d.teams.length >= 2 ? d.teams.slice(0, 4).map(String) : state.teams,
+    time: [0, 20, 30, 60].includes(+d.time) ? +d.time : 30,
+    shuffle: !!d.shuffle,
+    updatedAt: +d.updatedAt || 0,
+  };
+}
+const hasContent = (s) => s.questions.some((q) => q.text.trim() || q.answer.trim());
+
+/* ---------- Guardado: en la nube (db) si está disponible, y copia en este navegador ---------- */
+let docRef = null, saveTimer = null, saving = false, dirty = false;
+
+function setSync(t) { $('syncStatus').textContent = t; }
+
+function saveLocal() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+function save() {
+  state.updatedAt = Date.now();
+  saveLocal();
+  if (!docRef) return;
+  dirty = true;
+  setSync('Guardando…');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flush, 800);
+}
+async function flush() {
+  if (saving || !dirty || !docRef) return;
+  saving = true; dirty = false;
+  try {
+    await docRef.set(JSON.parse(JSON.stringify(state)));
+    setSync(dirty ? 'Guardando…' : '✓ Guardado. Tus preguntas aparecen en cualquier computadora donde abras este enlace.');
+  } catch (e) {
+    setSync('No se pudo guardar en la nube. Tus cambios siguen en este navegador.');
+  }
+  saving = false;
+  if (dirty) flush();
+}
+
+async function initCloud() {
+  try {
+    if (!window.claude?.use) { setSync('Tus preguntas se guardan en este navegador.'); return; }
+    const db = await window.claude.use('db');
+    if (!db) { setSync('Tus preguntas se guardan en este navegador.'); return; }
+    docRef = db.doc('trivia/config');
+    const snap = await docRef.get();
+    const remote = snap.exists ? sanitize(snap.data()) : null;
+    // Se queda con la versión más reciente; nunca reemplaza preguntas escritas por una lista vacía
+    const useRemote = remote && hasContent(remote) && (!hasContent(state) || remote.updatedAt >= state.updatedAt);
+    if (useRemote) {
+      state = remote; saveLocal();
+      renderTeams(); renderQuestions();
+      setSync('✓ Preguntas cargadas de la nube.');
+    } else {
+      // Sube lo que haya en este navegador
+      dirty = true; await flush();
+    }
+  } catch (e) {
+    docRef = null;
+    setSync('Tus preguntas se guardan en este navegador.');
+  }
+}
+
+try {
+  const saved = sanitize(JSON.parse(localStorage.getItem(STORE_KEY)));
+  if (saved && hasContent(saved)) state = saved;
+} catch (e) {}
+
+function isComplete(q) {
+  return !!(q.text.trim() && q.answer.trim());
+}
+
+/* ---------- Editor ---------- */
+function renderTeams() {
+  $('teamsSetup').innerHTML = state.teams.map((t, i) => `
+    <div class="team-input">
+      <span class="dot" style="background:${TEAM_COLORS[i]}"></span>
+      <input type="text" id="team${i}" value="${esc(t)}" data-team="${i}" placeholder="${DEFAULT_TEAMS[i]}" maxlength="24">
+    </div>`).join('');
+  document.querySelectorAll('[data-teams]').forEach((b) => b.classList.toggle('on', +b.dataset.teams === state.teams.length));
+  document.querySelectorAll('[data-time]').forEach((b) => b.classList.toggle('on', +b.dataset.time === state.time));
+  $('shuffleChk').checked = state.shuffle;
+}
+
+function renderQuestions() {
+  $('qList').innerHTML = state.questions.map((q, i) => `
+    <div class="q-item ${isComplete(q) ? 'done' : ''}" data-q="${i}">
+      <div class="q-head">
+        <span class="q-num">Pregunta ${i + 1}</span>
+        <span class="row">
+          <span class="q-status">${isComplete(q) ? '✔ Lista' : 'Incompleta'}</span>
+          <button class="icon-btn" data-del="${i}" title="Borrar pregunta">🗑 Borrar</button>
+        </span>
+      </div>
+      <textarea id="q${i}" data-field="text" placeholder="Escribe aquí la pregunta...">${esc(q.text)}</textarea>
+      <div class="opt">
+        <span class="tag">✔ Respuesta:</span>
+        <input type="text" id="q${i}a" data-field="answer" value="${esc(q.answer)}" placeholder="Escribe la respuesta correcta">
+      </div>
+    </div>`).join('');
+  updateCount();
+}
+
+function updateCount() {
+  const n = state.questions.filter(isComplete).length;
+  $('qCount').textContent = `— ${n} de ${state.questions.length} listas`;
+}
+
+function refreshItem(i) {
+  const el = document.querySelector(`[data-q="${i}"]`);
+  const ok = isComplete(state.questions[i]);
+  el.classList.toggle('done', ok);
+  el.querySelector('.q-status').textContent = ok ? '✔ Lista' : 'Incompleta';
+  updateCount();
+}
+
+function onEdit(e) {
+  const item = e.target.closest('[data-q]');
+  if (!item) return;
+  const i = +item.dataset.q;
+  const q = state.questions[i];
+  const field = e.target.dataset.field;
+  if (field !== 'text' && field !== 'answer') return;
+  q[field] = e.target.value;
+  refreshItem(i);
+  save();
+}
+$('qList').addEventListener('input', onEdit);
+$('qList').addEventListener('change', onEdit);
+
+// Borrar pide un segundo toque para confirmar
+$('qList').addEventListener('click', (e) => {
+  const del = e.target.closest('[data-del]');
+  if (!del) return;
+  const i = +del.dataset.del;
+  const q = state.questions[i];
+  if ((q.text || q.answer) && !del.classList.contains('armed')) {
+    del.classList.add('armed');
+    del.textContent = '¿Seguro? Toca otra vez';
+    setTimeout(() => { if (del.isConnected) { del.classList.remove('armed'); del.textContent = '🗑 Borrar'; } }, 3000);
+    return;
+  }
+  state.questions.splice(i, 1);
+  save(); renderQuestions();
+});
+
+$('addQ').onclick = () => {
+  state.questions.push(blankQ());
+  save(); renderQuestions();
+  const items = document.querySelectorAll('.q-item');
+  const last = items[items.length - 1];
+  last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  last.querySelector('textarea').focus();
+};
+
+$('teamsSetup').addEventListener('input', (e) => {
+  if (e.target.dataset.team === undefined) return;
+  state.teams[+e.target.dataset.team] = e.target.value;
+  save();
+});
+
+document.querySelectorAll('[data-teams]').forEach((b) => b.onclick = () => {
+  const n = +b.dataset.teams;
+  state.teams = Array.from({ length: n }, (_, i) => state.teams[i] ?? DEFAULT_TEAMS[i]);
+  save(); renderTeams();
+});
+document.querySelectorAll('[data-time]').forEach((b) => b.onclick = () => {
+  state.time = +b.dataset.time; save(); renderTeams();
+});
+$('shuffleChk').onchange = (e) => { state.shuffle = e.target.checked; save(); };
+
+// Copia de respaldo en archivo
+(async () => {
+  try {
+    if (!window.claude?.use) {
+      // Fuera de Claude (por ejemplo en GitHub Pages) se descarga directamente
+      $('exportBtn').classList.remove('hidden');
+      $('exportBtn').onclick = () => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+        a.download = 'trivia-preguntas.json';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      };
+      return;
+    }
+    const downloads = await window.claude.use('downloads');
+    if (!downloads) return;
+    $('exportBtn').classList.remove('hidden');
+    $('exportBtn').onclick = async () => {
+      try {
+        await downloads.save({ filename: 'trivia-preguntas.json', data: JSON.stringify(state, null, 2) });
+      } catch (e) {}
+    };
+  } catch (e) {}
+})();
+
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const data = sanitize(JSON.parse(await file.text()));
+    if (!data) throw new Error();
+    state = data;
+    save(); renderTeams(); renderQuestions();
+    $('startMsg').textContent = '';
+  } catch (err) {
+    $('startMsg').textContent = 'Ese archivo no es una copia de esta trivia.';
+  }
+  e.target.value = '';
+};
+
+/* ---------- Juego ---------- */
+let game = null;
+let timerId = null;
+
+function show(id) {
+  ['setup', 'play', 'final'].forEach((s) => $(s).classList.toggle('hidden', s !== id));
+  window.scrollTo(0, 0);
+}
+
+function startGame() {
+  let qs = state.questions.filter(isComplete).map((q) => ({ text: q.text.trim(), answer: q.answer.trim() }));
+  if (!qs.length) {
+    $('startMsg').textContent = 'Primero completa al menos una pregunta.';
+    return;
+  }
+  $('startMsg').textContent = '';
+  if (state.shuffle) {
+    for (let i = qs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [qs[i], qs[j]] = [qs[j], qs[i]]; }
+  }
+  const teams = state.teams.map((t, i) => t.trim() || DEFAULT_TEAMS[i]);
+  game = { qs, teams, scores: teams.map(() => 0), idx: 0 };
+  show('play');
+  renderQuestion();
+}
+$('startBtn').onclick = startGame;
+
+function renderScores(bumpIdx) {
+  $('scorebar').innerHTML = game.teams.map((t, i) => `
+    <div class="score ${i === game.idx % game.teams.length ? 'turn' : ''} ${i === bumpIdx ? 'bump' : ''}">
+      <span class="dot" style="background:${TEAM_COLORS[i]}"></span>${esc(t)}
+      <span class="pts">${game.scores[i]}</span>
+    </div>`).join('');
+}
+
+function renderQuestion() {
+  const q = game.qs[game.idx];
+  const turn = game.idx % game.teams.length;
+  game.awarded = new Set();
+  renderScores();
+  $('progress').textContent = `Pregunta ${game.idx + 1} de ${game.qs.length}`;
+  $('turnLabel').innerHTML = `Turno de <b style="color:${TEAM_COLORS[turn]}">${esc(game.teams[turn])}</b>`;
+  $('questionText').textContent = q.text;
+  $('answer').classList.add('hidden');
+  $('answer').innerHTML = `<small>RESPUESTA</small>${esc(q.answer)}`;
+  $('revealControls').classList.remove('hidden');
+  $('awardBox').classList.add('hidden');
+  resetQuit();
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerId);
+  const el = $('timer');
+  el.classList.remove('low');
+  if (!state.time) { el.textContent = ''; return; }
+  let left = state.time;
+  const tick = () => {
+    el.textContent = left > 0 ? `⏱ ${left}` : '⏰ ¡Se acabó el tiempo!';
+    el.classList.toggle('low', left > 0 && left <= 5);
+    if (left <= 0) { clearInterval(timerId); beep(); }
+    left--;
+  };
+  tick();
+  timerId = setInterval(tick, 1000);
+}
+
+let audioCtx = null;
+function beep() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.frequency.value = 440; g.gain.value = 0.15;
+    o.start(); o.stop(audioCtx.currentTime + 0.5);
+  } catch (e) {}
+}
+
+// Redoble de tambor breve (~1.5 s) y un "¡ta-da!" al final
+function suspense() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = audioCtx, t0 = ctx.currentTime + 0.05, dur = 1.4;
+    const noise = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+    const ch = noise.getChannelData(0);
+    for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / ch.length, 3);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass'; filter.frequency.value = 900; filter.Q.value = 0.8;
+    filter.connect(ctx.destination);
+    for (let t = 0; t < dur; t += 0.045) {
+      const src = ctx.createBufferSource(); const g = ctx.createGain();
+      src.buffer = noise;
+      g.gain.value = 0.15 + 0.5 * (t / dur); // va subiendo
+      src.connect(g); g.connect(filter);
+      src.start(t0 + t);
+    }
+    [523.25, 659.25, 783.99].forEach((f) => {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + dur);
+      g.gain.exponentialRampToValueAtTime(0.18, t0 + dur + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur + 0.6);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t0 + dur); o.stop(t0 + dur + 0.65);
+    });
+    return (dur + 0.05) * 1000;
+  } catch (e) { return 0; }
+}
+
+$('revealBtn').onclick = () => {
+  const btn = $('revealBtn');
+  if (btn.disabled) return;
+  clearInterval(timerId);
+  $('timer').classList.remove('low');
+  $('timer').textContent = '🥁 …';
+  btn.disabled = true;
+  setTimeout(() => { btn.disabled = false; revealAnswer(); }, suspense());
+};
+
+function revealAnswer() {
+  $('timer').textContent = '';
+  $('answer').classList.remove('hidden');
+  $('revealControls').classList.add('hidden');
+  $('awardBtns').innerHTML = game.teams.map((t, i) => `
+    <button class="award-btn" data-award="${i}" style="background:${TEAM_COLORS[i]}">${esc(t)}</button>`).join('');
+  $('awardBox').classList.remove('hidden');
+  $('nextBtn').textContent = game.idx === game.qs.length - 1 ? 'Ver resultados 🏆' : 'Siguiente ➜';
+};
+
+$('awardBtns').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-award]');
+  if (!b) return;
+  const i = +b.dataset.award;
+  // Tocar de nuevo quita el punto (por si fue un error)
+  if (game.awarded.has(i)) { game.awarded.delete(i); game.scores[i]--; b.classList.remove('given'); renderScores(); }
+  else { game.awarded.add(i); game.scores[i]++; b.classList.add('given'); renderScores(i); }
+});
+
+$('nextBtn').onclick = () => {
+  game.idx++;
+  if (game.idx < game.qs.length) renderQuestion();
+  else showFinal();
+};
+
+function resetQuit() { $('quitBtn').textContent = '✕ Salir'; $('quitBtn').dataset.armed = ''; }
+$('quitBtn').onclick = () => {
+  if (!$('quitBtn').dataset.armed) {
+    $('quitBtn').dataset.armed = '1';
+    $('quitBtn').textContent = '¿Salir? Se pierde el puntaje. Toca otra vez';
+    setTimeout(resetQuit, 3000);
+    return;
+  }
+  clearInterval(timerId); resetQuit(); exitFs(); show('setup');
+};
+
+$('fsBtn').onclick = async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch (e) {}
+};
+function exitFs() { try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} }
+
+function showFinal() {
+  show('final');
+  const order = game.teams.map((t, i) => ({ t, i, s: game.scores[i] })).sort((a, b) => b.s - a.s);
+  const top = order.filter((x) => x.s === order[0].s);
+  $('winnerText').innerHTML = top.length > 1
+    ? `¡Empate entre ${top.map((x) => `<span style="color:${TEAM_COLORS[x.i]}">${esc(x.t)}</span>`).join(' y ')}!`
+    : `¡Ganó <span style="color:${TEAM_COLORS[top[0].i]}">${esc(top[0].t)}</span>!`;
+  const medals = ['🥇', '🥈', '🥉', '🎖️'];
+  let rank = 0;
+  $('podium').innerHTML = order.map((x, k) => {
+    if (k > 0 && x.s < order[k - 1].s) rank = k;
+    return `<div class="score"><span>${medals[rank]} <span class="dot" style="background:${TEAM_COLORS[x.i]}"></span> ${esc(x.t)}</span><span class="pts">${x.s}</span></div>`;
+  }).join('');
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) confetti();
+}
+
+$('againBtn').onclick = startGame;
+$('editBtn').onclick = () => { exitFs(); show('setup'); };
+
+/* ---------- Confeti ---------- */
+function confetti() {
+  const c = $('confetti'), ctx = c.getContext('2d');
+  c.width = innerWidth; c.height = innerHeight;
+  const colors = [...TEAM_COLORS, '#6c4ce0'];
+  const parts = Array.from({ length: 180 }, () => ({
+    x: Math.random() * c.width, y: -20 - Math.random() * c.height,
+    w: 6 + Math.random() * 8, h: 10 + Math.random() * 8,
+    vy: 2 + Math.random() * 4, vx: -1.5 + Math.random() * 3,
+    r: Math.random() * 6, vr: -0.2 + Math.random() * 0.4,
+    color: colors[Math.floor(Math.random() * colors.length)],
+  }));
+  const end = Date.now() + 6000;
+  (function frame() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    parts.forEach((p) => {
+      p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      if (p.y > c.height && Date.now() < end) p.y = -20;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
+    });
+    if (parts.some((p) => p.y < c.height)) requestAnimationFrame(frame);
+    else ctx.clearRect(0, 0, c.width, c.height);
+  })();
+}
+
+renderTeams();
+renderQuestions();
+initCloud();
+</script>
+</body>
+</html>
